@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 export const connectDb = async (mongoUri) => {
-  await mongoose.connect(mongoUri);
-  console.log('MongoDB connected');
+    try {
+        await mongoose.connect(mongoUri);
+        console.log('MongoDB connected');
+    } catch (error) {
+        console.error('MongoDB connection failed:', error.message);
+        throw error;
+    }
 };
