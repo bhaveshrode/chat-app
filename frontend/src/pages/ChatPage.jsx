@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { socket } from "../services/socket";
-import { api, setAuthToken } from '../services/api';
-import { ChatWindow } from '../components/ChatWindow';
-import { useTheme } from '../context/ThemeContext';
+import {useEffect, useRef, useState} from 'react';
+import {socket} from "../services/socket";
+import {api, setAuthToken} from '../services/api';
+import {ChatWindow} from '../components/ChatWindow';
+import {useTheme} from '../context/ThemeContext';
 
 export const ChatPage = () => {
-    const { theme, toggleTheme } = useTheme();
+    const {theme, toggleTheme} = useTheme();
     const [token, setToken] = useState(localStorage.getItem('token') || '');
     const [me, setMe] = useState(null);
     const [chats, setChats] = useState([]);
-    const [activeChatId, setActiveChatId] = useState('global-chat');
+    const [activeChatId, setActiveChatId] = useState(null);
 
     const hasEmitted = useRef(false)
 
@@ -31,39 +31,59 @@ export const ChatPage = () => {
 
         const userId = meMock._id;
 
-        socket.auth = { token };
+        socket.auth = {token};
 
         if (!socket.connected) {
             socket.connect();
         }
-
-        socket.emit("chat:join", "global-chat");
-        console.log("✅ Joined global-chat AFTER LOGIN");
 
         if (!hasEmitted.current) {
             socket.emit('presence:online', userId);
             hasEmitted.current = true;
         }
 
-        api.get('/chats').then(({ data }) => {
+        api.get('/chats').then(({data}) => {
             setChats(data);
             if (data[0]) setActiveChatId(data[0]._id);
         });
     }, [token]);
 
+    useEffect(() => {
+        if (!activeChatId) return;
 
+        socket.emit("chat:join", activeChatId);
+        console.log("✅ Joined chat:", activeChatId);
+    }, [activeChatId]);
 
     const login = async (formData) => {
-        const { data } = await api.post('/auth/login', formData);
+        const {data} = await api.post('/auth/login', formData);
         setToken(data.token);
         localStorage.setItem('me', JSON.stringify(data.user));
+    };
+
+    const createChat = async () => {
+        const otherUserId = prompt("Enter other user ID");
+
+        if (!otherUserId || otherUserId.trim() === "") {
+            alert("User ID is required");
+            return;
+        }
+
+        const { data } = await api.post('/chats', {
+            name: "New Chat",
+            memberIds: [otherUserId]
+        });
+
+        console.log("Created chat:", data);
+        setChats((prev) => [data, ...prev]);
+        setActiveChatId(data._id);
     };
 
     if (!token) {
         return (
             <main>
                 <h1>Real-Time Chat App</h1>
-                <button onClick={() => login({ email: 'demo@mail.com', password: 'password' })}>Quick Login</button>
+                <button onClick={() => login({email: 'demo@mail.com', password: 'password'})}>Quick Login</button>
             </main>
         );
     }
@@ -85,7 +105,9 @@ export const ChatPage = () => {
                 ))}
             </aside>
 
-            <ChatWindow socket={socket} activeChatId={activeChatId} me={me} />
+            <button onClick={createChat}>Create Chat</button>
+
+            <ChatWindow socket={socket} activeChatId={activeChatId} me={me}/>
         </main>
     );
 };
