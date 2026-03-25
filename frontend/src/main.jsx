@@ -4,10 +4,20 @@ import { ChatPage } from './pages/ChatPage';
 import { ThemeProvider } from './context/ThemeContext';
 import './styles/app.css';
 
+import AuthPage from "./pages/AuthPage";
+import { setAuthToken } from "./services/api";
+
+function App() {
+    return <AuthPage />;
+}
+
+const token = localStorage.getItem("token");
+if (token) setAuthToken(token);
+
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
-      <ChatPage />
+      <App />
     </ThemeProvider>
   </React.StrictMode>
 );
