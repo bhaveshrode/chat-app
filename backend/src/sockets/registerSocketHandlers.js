@@ -21,11 +21,13 @@ export const registerSocketHandlers = (io) => {
             await User.findByIdAndUpdate(userId, { lastSeenAt: new Date() });
         });
 
-        socket.on('chat:join', (chatId) => socket.join(chatId));
+        socket.on('chat:join', (chatId) => {
+            console.log(`User joined room: ${chatId}`);
+            socket.join(chatId);
+        });
 
         socket.on('message:new', async ({ chatId, message }) => {
             io.to(chatId).emit('message:new', message);
-            await Message.findByIdAndUpdate(message._id, { $set: { updatedAt: new Date() } });
         });
 
         socket.on('typing:start', ({ chatId, userId }) => {
