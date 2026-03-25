@@ -27,7 +27,17 @@ export const registerSocketHandlers = (io) => {
         });
 
         socket.on('message:new', async ({ chatId, message }) => {
-            io.to(chatId).emit('message:new', message);
+            try{
+                const savedMessage = await Message.create({
+                    chatId: chatId,
+                    senderId: message.sender,
+                    text: message.text,
+                });
+                io.to(chatId).emit('message:new', savedMessage);
+            }
+            catch(err){
+                console.error("❌ Error saving message:", err);
+            }
         });
 
         socket.on('typing:start', ({ chatId, userId }) => {
