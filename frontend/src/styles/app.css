@@ -1,0 +1,30 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+}
+
+[data-theme='dark'] {
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+[data-theme='light'] {
+  background: #f8fafc;
+  color: #0f172a;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+button {
+  margin: 0.25rem;
+}
+
+input {
+  width: 100%;
+  max-width: 360px;
+}
