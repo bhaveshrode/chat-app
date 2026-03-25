@@ -1,17 +1,67 @@
-import mongoose from 'mongoose';
+import { Message } from '../models/Message.js';
+import { User } from '../models/User.js';
 
-const messageSchema = new mongoose.Schema(
-  {
-    chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
-    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    text: String,
-    fileUrl: String,
-    fileType: String,
-    seenBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
-  },
-  { timestamps: true }
-);
+export const registerSocketHandlers = (io) => {
+    const onlineUsers = new Map();
 
-messageSchema.index({ text: 'text' });
+    io.on('connection', (socket) => {
+        console.log("🔌 User connected:", socket.id);
 
-export const Message = mongoose.model('Message', messageSchema);
+        socket.on('presence:online', async (userId) => {
+            if (!userId) {
+                console.warn("⚠️ Received null userId");
+                return;
+            }
+            onlineUsers.set(userId, socket.id);
+            socket.data.userId = userId;
+
+            console.log(`🟢 User connected: ${userId}`);
+
+            io.emit('presence:update', { userId, online: true });
+            await User.findByIdAndUpdate(userId, { lastSeenAt: new Date() });
+        });
+
+        socket.on('chat:join', (chatId) => {
+            console.log(`User joined room: ${chatId}`);
+            socket.join(chatId);
+        });
+
+        socket.on('message:new', async ({ chatId, message }) => {
+            try{
+                const savedMessage = await Message.create({
+                    chatId: chatId,
+                    senderId: message.sender,
+                    text: message.text,
+                });
+                io.to(chatId).emit('message:new', savedMessage);
+            }
+            catch(err){
+                console.error("❌ Error saving message:", err);
+            }
+        });
+
+        socket.on('typing:start', ({ chatId, userId }) => {
+            socket.to(chatId).emit('typing:start', { chatId, userId });
+        });
+
+        socket.on('typing:stop', ({ chatId, userId }) => {
+            socket.to(chatId).emit('typing:stop', { chatId, userId });
+        });
+
+        socket.on('message:seen', async ({ messageId, userId, chatId }) => {
+            await Message.findByIdAndUpdate(messageId, { $addToSet: { seenBy: userId } });
+            io.to(chatId).emit('message:seen', { messageId, userId });
+        });
+
+        socket.on('disconnect', async () => {
+            console.log("User disconnected:", socket.id);
+
+            const userId = socket.data.userId;
+            if (!userId) return;
+
+            onlineUsers.delete(userId);
+            io.emit('presence:update', { userId, online: false });
+            await User.findByIdAndUpdate(userId, { lastSeenAt: new Date() });
+        });
+    });
+};
