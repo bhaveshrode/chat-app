@@ -14,15 +14,35 @@ export const ChatWindow = ({ socket, activeChatId, me }) => {
 
         socket.on("message:new", handler);
 
-        return () => socket.off("message:new");
+        return () => socket.off("message:new", handler);
     }, [socket, activeChatId]);
+
+    useEffect(() => {
+        if (!activeChatId) return;
+
+        fetch(`http://localhost:5000/api/messages/${activeChatId}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to fetch messages.");
+                return res.json();
+            })
+            .then(data => {
+                console.log("📦 Loaded messages:", data);
+                setMessages(data);
+            })
+            .catch(err => {
+                console.error("❌ Fetch error:", err);
+            });
+    }, [activeChatId]);
 
     // Send message
     const sendMessage = () => {
         if (!text.trim() || !activeChatId) return;
 
         const message = {
-            _id: Date.now().toString() + Math.random(),
             text,
             sender: me._id,
         };
@@ -55,13 +75,13 @@ export const ChatWindow = ({ socket, activeChatId, me }) => {
                     <div
                         key={msg._id}
                         style={{
-                            textAlign: msg.sender === me._id ? "right" : "left",
+                            textAlign: msg.senderId === me?._id ? "right" : "left",
                             margin: "5px 0",
                         }}
                     >
                     <span
                         style={{
-                            background: msg.sender === me._id ? "#4caf50" : "#444",
+                            background: msg.senderId === me?._id ? "#4caf50" : "#444",
                             padding: "8px 12px",
                             borderRadius: "10px",
                             display: "inline-block",
