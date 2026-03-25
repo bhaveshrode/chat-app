@@ -13,6 +13,10 @@ export const createApp = () => {
   app.use(express.json());
   app.use('/uploads', express.static(env.uploadDir));
 
+  app.get("/", (_req, res) => {
+        res.send("Backend is running");
+    });
+
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   app.use('/api/auth', authRouter(env.jwtSecret));
 
