@@ -9,15 +9,7 @@ export const ChatPage = () => {
     const [token, setToken] = useState(localStorage.getItem('token') || '');
     const [me, setMe] = useState(null);
     const [chats, setChats] = useState([]);
-    const [activeChatId, setActiveChatId] = useState('');
-
-    useEffect(() => {
-        socket.on("connect", () => {
-            console.log("✅ Frontend connected:", socket.id);
-        });
-
-        return () => socket.off("connect");
-    }, []);
+    const [activeChatId, setActiveChatId] = useState('global-chat');
 
     const hasEmitted = useRef(false)
 
@@ -45,6 +37,9 @@ export const ChatPage = () => {
             socket.connect();
         }
 
+        socket.emit("chat:join", "global-chat");
+        console.log("✅ Joined global-chat AFTER LOGIN");
+
         if (!hasEmitted.current) {
             socket.emit('presence:online', userId);
             hasEmitted.current = true;
@@ -54,11 +49,9 @@ export const ChatPage = () => {
             setChats(data);
             if (data[0]) setActiveChatId(data[0]._id);
         });
-
-        return () => {
-            socket.off();
-        }
     }, [token]);
+
+
 
     const login = async (formData) => {
         const { data } = await api.post('/auth/login', formData);
