@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { registerUser, loginUser, setAuthToken } from "../services/api";
+import { socket } from "../services/socket";
 
-export default function AuthPage() {
+export default function AuthPage({ onLogin }) {
     const [isLogin, setIsLogin] = useState(true);
     const [form, setForm] = useState({ name: "", email: "", password: "" });
 
@@ -14,8 +15,13 @@ export default function AuthPage() {
 
         if (data.token) {
             localStorage.setItem("token", data.token);
+            localStorage.setItem("me", JSON.stringify(data.user));
 
             setAuthToken(data.token);
+            onLogin(data.token);
+
+            socket.auth = { token: data.token };
+            socket.connect();
 
             alert("Success!");
         } else {
