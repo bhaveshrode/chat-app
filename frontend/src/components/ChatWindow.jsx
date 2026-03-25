@@ -1,62 +1,88 @@
-import { useEffect, useState } from 'react';
-import { api } from '../services/api';
+import { useEffect, useState } from "react";
 
 export const ChatWindow = ({ socket, activeChatId, me }) => {
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState('');
-  const [typing, setTyping] = useState(false);
+    const [text, setText] = useState("");
+    const [messages, setMessages] = useState([]);
 
-  useEffect(() => {
-    if (!activeChatId) return;
+    // Receive messages
+    useEffect(() => {
+        const handler = (msg) => {
+            console.log("📩 Message received:", msg);
 
-    socket.emit('chat:join', activeChatId);
-    api.get(`/messages/${activeChatId}`).then(({ data }) => setMessages(data));
-  }, [activeChatId, socket]);
+            setMessages((prev) => [...prev, msg]);
+        };
 
-  useEffect(() => {
-    const onMessage = (message) => setMessages((prev) => [...prev, message]);
-    const onTypingStart = ({ userId }) => setTyping(userId !== me.id);
-    const onTypingStop = () => setTyping(false);
+        socket.on("message:new", handler);
 
-    socket.on('message:new', onMessage);
-    socket.on('typing:start', onTypingStart);
-    socket.on('typing:stop', onTypingStop);
+        return () => socket.off("message:new");
+    }, [socket, activeChatId]);
 
-    return () => {
-      socket.off('message:new', onMessage);
-      socket.off('typing:start', onTypingStart);
-      socket.off('typing:stop', onTypingStop);
+    // Send message
+    const sendMessage = () => {
+        if (!text.trim() || !activeChatId) return;
+
+        const message = {
+            _id: Date.now().toString() + Math.random(),
+            text,
+            sender: me._id,
+        };
+
+        socket.emit("message:new", {
+            chatId: activeChatId,
+            message,
+        });
+
+        setText("");
     };
-  }, [socket, me.id]);
 
-  const send = async () => {
-    if (!text.trim() || !activeChatId) return;
+    return (
+        <section style={{ marginTop: "20px" }}>
 
-    const { data } = await api.post(`/messages/${activeChatId}`, { text });
-    socket.emit('message:new', { chatId: activeChatId, message: data });
-    setText('');
-  };
+            {/* MESSAGE DISPLAY AREA */}
+            <div
+                style={{
+                    height: "300px",
+                    overflowY: "auto",
+                    border: "1px solid #ccc",
+                    padding: "10px",
+                    marginBottom: "10px",
+                    background: "#111"
+                }}
+            >
+                {messages.length === 0 && <p>No messages yet</p>}
 
-  const onChange = (value) => {
-    setText(value);
-    socket.emit('typing:start', { chatId: activeChatId, userId: me.id });
-    setTimeout(() => socket.emit('typing:stop', { chatId: activeChatId, userId: me.id }), 700);
-  };
+                {messages.map((msg) => (
+                    <div
+                        key={msg._id}
+                        style={{
+                            textAlign: msg.sender === me._id ? "right" : "left",
+                            margin: "5px 0",
+                        }}
+                    >
+                    <span
+                        style={{
+                            background: msg.sender === me._id ? "#4caf50" : "#444",
+                            padding: "8px 12px",
+                            borderRadius: "10px",
+                            display: "inline-block",
+                            color: "white",
+                        }}
+                    >
+                        {msg.text}
+                    </span>
+                    </div>
+                ))}
+            </div>
 
-  return (
-    <section>
-      <div>
-        {messages.map((message) => (
-          <p key={message._id}>
-            <b>{message.senderId === me.id ? 'You' : 'User'}:</b> {message.text}{' '}
-            <small>{new Date(message.createdAt).toLocaleTimeString()}</small>
-            {message.seenBy?.length > 1 && ' ✔✔'}
-          </p>
-        ))}
-      </div>
-      {typing && <p>Typing...</p>}
-      <input value={text} onChange={(e) => onChange(e.target.value)} placeholder="Type a message" />
-      <button onClick={send}>Send</button>
-    </section>
-  );
+            {/* INPUT AREA */}
+            <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Type a message"
+                style={{ width: "70%" }}
+            />
+
+            <button onClick={sendMessage}>Send</button>
+        </section>
+    );
 };
