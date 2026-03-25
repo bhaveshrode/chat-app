@@ -6,7 +6,7 @@ import { signToken } from '../utils/jwt.js';
 export const authRouter = (jwtSecret) => {
   const router = express.Router();
 
-  router.post('/signup', async (req, res) => {
+  router.post('/register', async (req, res) => {
     const { name, email, password } = req.body;
 
     const exists = await User.findOne({ email });
