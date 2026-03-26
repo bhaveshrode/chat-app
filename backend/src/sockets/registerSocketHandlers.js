@@ -13,12 +13,18 @@ export const registerSocketHandlers = (io) => {
                 console.warn("⚠️ Received null userId");
                 return;
             }
+
             onlineUsers.set(userId, socket.id);
             socket.data.userId = userId;
 
             console.log(`🟢 User connected: ${userId}`);
 
-            io.emit('presence:update', { userId, online: true });
+            // Send Full Online List to This User
+            socket.emit('presence:list', Array.from(onlineUsers.keys()));
+
+            // Update Others
+            socket.broadcast.emit('presence:update', { userId, online: true });
+
             await User.findByIdAndUpdate(userId, { lastSeenAt: new Date() });
         });
 
