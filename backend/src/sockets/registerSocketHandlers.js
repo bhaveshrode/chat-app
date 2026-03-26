@@ -1,5 +1,6 @@
 import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
+import { Chat } from "../models/Chat.js"
 
 export const registerSocketHandlers = (io) => {
     const onlineUsers = new Map();
@@ -33,6 +34,11 @@ export const registerSocketHandlers = (io) => {
                     senderId: message.sender,
                     text: message.text,
                 });
+
+                await Chat.findByIdAndUpdate(chatId, {
+                    lastMessage: savedMessage._id
+                });
+
                 io.to(chatId).emit('message:new', savedMessage);
             }
             catch(err){
