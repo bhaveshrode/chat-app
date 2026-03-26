@@ -4,7 +4,10 @@ import { Chat } from '../models/Chat.js';
 export const chatRouter = express.Router();
 
 chatRouter.get('/', async (req, res) => {
-    const chats = await Chat.find({ members: req.user.id }).sort({ updatedAt: -1 });
+    const chats = await Chat.find({ members: req.user.id })
+        .populate("members", "_id name email")
+        .sort({ updatedAt: -1 });
+
     res.json(chats);
 });
 
