@@ -135,19 +135,68 @@ export const ChatPage = () => {
 
                 <hr />
 
+                <h3>Chats</h3>
+
+                {chats.map((chat) => {
+                    const otherUser = chat.members?.find(
+                        (member) => member._id !== me._id
+                    );
+
+                    return (
+                        <div
+                            key={chat._id}
+                            onClick={() => setActiveChatId(chat._id)}
+                            style={{
+                                padding: "8px",
+                                cursor: "pointer",
+                                background: activeChatId === chat._id ? "#333" : "transparent",
+                                color: "white",
+                                marginBottom: "5px",
+                                borderRadius: "5px"
+                            }}
+                        >
+                            {chat.isGroup ? chat.name : otherUser ? (otherUser.name || otherUser.email) : "Unknown User"}
+                        </div>
+                    );
+                })}
+
+                <hr />
+
                 <h3>Users</h3>
 
                 {users.map((user) => (
                     <div
                         key={user._id}
-                        onClick={() => startChat(user._id)}
                         style={{
                             padding: "8px",
-                            cursor: "pointer",
-                            borderBottom: "1px solid gray"
+                            borderBottom: "1px solid gray",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
                         }}
                     >
-                        {user.name || user.email}
+                        <span
+                            onClick={() => startChat(user._id)}
+                            style={{ cursor: "pointer" }}
+                        >
+                            {user.name || user.email}
+                        </span>
+
+                        <button
+                            onClick={async () => {
+                                await api.delete(`/users/${user._id}`);
+                                setUsers(prev => prev.filter(u => u._id !== user._id));
+                            }}
+                            style={{
+                                background: "red",
+                                color: "white",
+                                border: "none",
+                                padding: "4px 8px",
+                                cursor: "pointer"
+                            }}
+                        >
+                            Delete
+                        </button>
                     </div>
                 ))}
             </div>
