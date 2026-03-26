@@ -147,15 +147,23 @@ export const ChatPage = () => {
                             key={chat._id}
                             onClick={() => setActiveChatId(chat._id)}
                             style={{
-                                padding: "8px",
+                                padding: "10px",
                                 cursor: "pointer",
                                 background: activeChatId === chat._id ? "#333" : "transparent",
                                 color: "white",
-                                marginBottom: "5px",
+                                marginBottom: "8px",
                                 borderRadius: "5px"
                             }}
                         >
-                            {chat.isGroup ? chat.name : otherUser ? (otherUser.name || otherUser.email) : "Unknown User"}
+                            {/* Name */}
+                            <div style={{ fontWeight: "bold" }}>
+                                {chat.isGroup ? chat.name : otherUser ? (otherUser.name || otherUser.email) : "Unknown User"}
+                            </div>
+
+                            {/* Last Message */}
+                            <div style={{ fontSize: "12px", color: "#aaa" }}>
+                                {chat.lastMessage?.text || "No messages yet"}
+                            </div>
                         </div>
                     );
                 })}
