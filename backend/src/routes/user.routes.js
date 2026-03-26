@@ -12,4 +12,9 @@ router.get("/", authMiddleware(env.jwtSecret), async (req, res) => {
     res.json(users);
 });
 
+router.delete("/:id", async (req, res) => {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted" });
+});
+
 export default router;
