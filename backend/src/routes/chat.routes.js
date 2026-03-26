@@ -6,6 +6,13 @@ export const chatRouter = express.Router();
 chatRouter.get('/', async (req, res) => {
     const chats = await Chat.find({ members: req.user.id })
         .populate("members", "_id name email")
+        .populate({
+            path: "lastMessage",
+            populate: {
+                path: "senderId",
+                select: "name email"
+            }
+        })
         .sort({ updatedAt: -1 });
 
     res.json(chats);
