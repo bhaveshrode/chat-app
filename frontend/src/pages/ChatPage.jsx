@@ -4,6 +4,23 @@ import {api, setAuthToken} from '../services/api';
 import {ChatWindow} from '../components/ChatWindow';
 import {useTheme} from '../context/ThemeContext';
 
+const formatSidebarTime = (date) => {
+    const d = new Date(date);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (d.toDateString() === today.toDateString()) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    if (d.toDateString() === yesterday.toDateString()) {
+        return "Yesterday";
+    }
+
+    return d.toLocaleDateString(); // 20/03/2026
+};
+
 export const ChatPage = () => {
     const {theme, toggleTheme} = useTheme();
     const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -163,6 +180,13 @@ export const ChatPage = () => {
                             {/* Last Message */}
                             <div style={{ fontSize: "12px", color: "#aaa" }}>
                                 {chat.lastMessage?.text || "No messages yet"}
+                            </div>
+
+                            <div style={{ fontSize: "10px", color: "#777" }}>
+                                {chat.lastMessage?.createdAt
+                                    ? formatSidebarTime(chat.lastMessage.createdAt)
+                                    : ""
+                                }
                             </div>
                         </div>
                     );
