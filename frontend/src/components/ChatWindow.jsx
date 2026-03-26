@@ -1,5 +1,25 @@
 import { useEffect, useState } from "react";
 
+const formatMessageTime = (date) => {
+    const d = new Date(date);
+    return d.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const formatMessageDate = (date) => {
+    const d = new Date(date);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (d.toDateString() === today.toDateString()) return null;
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+    return d.toLocaleDateString(); // e.g. 20/03/2026
+};
+
 export const ChatWindow = ({ socket, activeChatId, me }) => {
     const [text, setText] = useState("");
     const [messages, setMessages] = useState([]);
@@ -58,7 +78,7 @@ export const ChatWindow = ({ socket, activeChatId, me }) => {
     return (
         <section style={{ marginTop: "20px" }}>
 
-            {/* MESSAGE DISPLAY AREA */}
+            {/* Message Display Area */}
             <div
                 style={{
                     height: "300px",
@@ -71,27 +91,60 @@ export const ChatWindow = ({ socket, activeChatId, me }) => {
             >
                 {messages.length === 0 && <p>No messages yet</p>}
 
-                {messages.map((msg) => (
-                    <div
-                        key={msg._id}
-                        style={{
-                            textAlign: msg.senderId === me?._id ? "right" : "left",
-                            margin: "5px 0",
-                        }}
-                    >
-                    <span
-                        style={{
-                            background: msg.senderId === me?._id ? "#4caf50" : "#444",
-                            padding: "8px 12px",
-                            borderRadius: "10px",
-                            display: "inline-block",
-                            color: "white",
-                        }}
-                    >
-                        {msg.text}
-                    </span>
-                    </div>
-                ))}
+                {messages.map((msg, index) => {
+                    const showDate =
+                        index === 0 ||
+                        new Date(messages[index - 1].createdAt).toDateString() !==
+                        new Date(msg.createdAt).toDateString();
+
+                    return (
+                        <div key={msg._id}>
+
+                            {/* Date Header */}
+                            {showDate && (
+                                <div style={{
+                                    textAlign: "center",
+                                    margin: "10px 0",
+                                    color: "#aaa",
+                                    fontSize: "12px"
+                                }}>
+                                    {formatMessageDate(msg.createdAt) || "Today"}
+                                </div>
+                            )}
+
+                            {/* Message */}
+                            <div
+                                style={{
+                                    textAlign: msg.senderId === me?._id ? "right" : "left",
+                                    margin: "5px 0",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        background: msg.senderId === me?._id ? "#4caf50" : "#444",
+                                        padding: "8px 12px",
+                                        borderRadius: "10px",
+                                        display: "inline-block",
+                                        color: "white",
+                                        maxWidth: "60%"
+                                    }}
+                                >
+                                    <div>{msg.text}</div>
+
+                                    {/* Time */}
+                                    <div style={{
+                                        fontSize: "10px",
+                                        color: "#ddd",
+                                        marginTop: "2px",
+                                        textAlign: "right"
+                                    }}>
+                                        {formatMessageTime(msg.createdAt)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* INPUT AREA */}
