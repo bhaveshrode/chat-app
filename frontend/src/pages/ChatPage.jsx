@@ -28,6 +28,7 @@ export const ChatPage = () => {
     const [chats, setChats] = useState([]);
     const [activeChatId, setActiveChatId] = useState(null);
     const [users, setUsers] = useState([]);
+    const [onlineUsers, setOnlineUsers] = useState({});
 
     const hasEmitted = useRef(false)
 
@@ -76,6 +77,31 @@ export const ChatPage = () => {
         socket.emit("chat:join", activeChatId);
         console.log("✅ Joined chat:", activeChatId);
     }, [activeChatId]);
+
+    useEffect(() => {
+        const handlePresenceUpdate = ({ userId, online }) => {
+            setOnlineUsers(prev => ({
+                ...prev,
+                [userId]: online
+            }));
+        };
+
+        const handlePresenceList = (userIds) => {
+            const map = {};
+            userIds.forEach(id => {
+                map[id] = true;
+            });
+            setOnlineUsers(map);
+        };
+
+        socket.on("presence:update", handlePresenceUpdate);
+        socket.on("presence:list", handlePresenceList);
+
+        return () => {
+            socket.off("presence:update", handlePresenceUpdate);
+            socket.off("presence:list", handlePresenceList);
+        };
+    }, []);
 
     const login = async (formData) => {
         const {data} = await api.post('/auth/login', formData);
@@ -207,12 +233,24 @@ export const ChatPage = () => {
                             alignItems: "center"
                         }}
                     >
-                        <span
-                            onClick={() => startChat(user._id)}
-                            style={{ cursor: "pointer" }}
-                        >
-                            {user.name || user.email}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+
+                            {/* Online Dot */}
+                            <span style={{
+                                width: "8px",
+                                height: "8px",
+                                borderRadius: "50%",
+                                background: onlineUsers[user._id] ? "limegreen" : "gray"
+                            }} />
+
+                            {/* User Name */}
+                            <span
+                                onClick={() => startChat(user._id)}
+                                style={{ cursor: "pointer" }}
+                            >
+                                {user.name || user.email}
+                            </span>
+                        </div>
 
                         <button
                             onClick={async () => {
@@ -233,14 +271,43 @@ export const ChatPage = () => {
                 ))}
             </div>
 
-            {/* RIGHT CHAT WINDOW */}
+            {/* Right Chat Window */}
             <div style={{ flex: 1, padding: "20px" }}>
                 {activeChatId ? (
-                    <ChatWindow
-                        socket={socket}
-                        activeChatId={activeChatId}
-                        me={me}
-                    />
+                    <>
+                        {/* Chat Header */}
+                        {(() => {
+                            const activeChat = chats.find(c => c._id === activeChatId);
+                            const otherUser = activeChat?.members?.find(
+                                m => m._id !== me._id
+                            );
+
+                            return (
+                                <div style={{
+                                    marginBottom: "10px",
+                                    color: "white"
+                                }}>
+                                    <strong>
+                                        {otherUser?.name || otherUser?.email || "User"}
+                                    </strong>
+
+                                    <span style={{
+                                        marginLeft: "10px",
+                                        color: onlineUsers[otherUser?._id] ? "limegreen" : "gray",
+                                        fontSize: "12px"
+                                    }}>
+                                        {onlineUsers[otherUser?._id] ? "● Online" : "● Offline"}
+                                    </span>
+                                </div>
+                            );
+                        })()}
+
+                        <ChatWindow
+                            socket={socket}
+                            activeChatId={activeChatId}
+                            me={me}
+                        />
+                    </>
                 ) : (
                     <p>Select a chat</p>
                 )}
