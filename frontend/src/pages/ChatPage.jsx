@@ -10,6 +10,7 @@ export const ChatPage = () => {
     const [me, setMe] = useState(null);
     const [chats, setChats] = useState([]);
     const [activeChatId, setActiveChatId] = useState(null);
+    const [users, setUsers] = useState([]);
 
     const hasEmitted = useRef(false)
 
@@ -46,6 +47,10 @@ export const ChatPage = () => {
             setChats(data);
             if (data[0]) setActiveChatId(data[0]._id);
         });
+
+        api.get('/users').then(({data}) => {
+            setUsers(data);
+        });
     }, [token]);
 
     useEffect(() => {
@@ -79,6 +84,25 @@ export const ChatPage = () => {
         setActiveChatId(data._id);
     };
 
+    const startChat = async (userId) => {
+        try {
+            const { data } = await api.post('/chats', {
+                memberIds: [userId]
+            });
+
+            setChats((prev) => {
+                const exists = prev.find(c => c._id === data._id);
+                if (exists) return prev;
+                return [data, ...prev];
+            });
+
+            setActiveChatId(data._id);
+        }
+        catch (err) {
+            console.error("Chat creation error:", err);
+        }
+    };
+
     if (!token) {
         return (
             <main>
@@ -91,23 +115,56 @@ export const ChatPage = () => {
     if (!me) return <p>Loading...</p>;
 
     return (
-        <main>
-            <header>
-                <h1>Chats</h1>
-                <button onClick={toggleTheme}>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</button>
-            </header>
+        <div style={{ display: "flex", height: "100vh" }}>
 
-            <aside>
-                {chats.map((chat) => (
-                    <button key={chat._id} onClick={() => setActiveChatId(chat._id)}>
-                        {chat.name || 'Direct Chat'}
-                    </button>
+            {/* LEFT SIDEBAR */}
+            <div style={{
+                width: "250px",
+                borderRight: "1px solid gray",
+                padding: "10px"
+            }}>
+                <h2>Chats</h2>
+
+                <button onClick={toggleTheme}>
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                </button>
+
+                <br /><br />
+
+                <button onClick={createChat}>+ Create Chat</button>
+
+                <hr />
+
+                <h3>Users</h3>
+
+                {users.map((user) => (
+                    <div
+                        key={user._id}
+                        onClick={() => startChat(user._id)}
+                        style={{
+                            padding: "8px",
+                            cursor: "pointer",
+                            borderBottom: "1px solid gray"
+                        }}
+                    >
+                        {user.name || user.email}
+                    </div>
                 ))}
-            </aside>
+            </div>
 
-            <button onClick={createChat}>Create Chat</button>
+            {/* RIGHT CHAT WINDOW */}
+            <div style={{ flex: 1, padding: "20px" }}>
+                {activeChatId ? (
+                    <ChatWindow
+                        socket={socket}
+                        activeChatId={activeChatId}
+                        me={me}
+                    />
+                ) : (
+                    <p>Select a chat</p>
+                )}
+            </div>
 
-            <ChatWindow socket={socket} activeChatId={activeChatId} me={me}/>
-        </main>
+        </div>
     );
 };
