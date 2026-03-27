@@ -29,12 +29,12 @@ export const ChatPage = () => {
     const [activeChatId, setActiveChatId] = useState(null);
     const [users, setUsers] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState({});
-
     const hasEmitted = useRef(false);
     const [deleteChatPopup, setDeleteChatPopup] = useState({
         visible: false,
         chatId: null
     });
+    const [unreadCounts, setUnreadCounts] = useState({});
 
     useEffect(() => {
         if (!token) return;
@@ -68,6 +68,14 @@ export const ChatPage = () => {
         api.get('/chats').then(({data}) => {
             setChats(data);
             if (data[0]) setActiveChatId(data[0]._id);
+        });
+
+        api.get('/chats/unread').then(({ data }) => {
+            const map = {};
+            data.forEach(item => {
+                map[item.chatId] = item.unread;
+            });
+            setUnreadCounts(map);
         });
 
         api.get('/users').then(({data}) => {
@@ -106,6 +114,45 @@ export const ChatPage = () => {
             socket.off("presence:list", handlePresenceList);
         };
     }, []);
+
+    useEffect(() => {
+        const handleNewMessage = (msg) => {
+            if (msg.chatId === activeChatId) {
+                // Auto Mark As Seen
+                socket.emit("chat:markSeen", {
+                    chatId: msg.chatId,
+                    userId: me._id
+                });
+
+            } else {
+                // Increase Unread
+                setUnreadCounts(prev => ({
+                    ...prev,
+                    [msg.chatId]: (prev[msg.chatId] || 0) + 1
+                }));
+            }
+        };
+
+        socket.on("message:new", handleNewMessage);
+
+        return () => {
+            socket.off("message:new", handleNewMessage);
+        };
+    }, [activeChatId, me]);
+
+    useEffect(() => {
+        if (!activeChatId || !me) return;
+
+        socket.emit("chat:markSeen", {
+            chatId: activeChatId,
+            userId: me._id
+        });
+
+        setUnreadCounts(prev => ({
+            ...prev,
+            [activeChatId]: 0
+        }));
+    }, [activeChatId, me]);
 
     const login = async (formData) => {
         const {data} = await api.post('/auth/login', formData);
@@ -202,15 +249,42 @@ export const ChatPage = () => {
                             }}
                         >
                             {/* CLICK AREA */}
-                            <div onClick={() => setActiveChatId(chat._id)}>
+                            <div onClick={() => {
+                                    setActiveChatId(chat._id);
+
+                                    socket.emit("chat:markSeen", {
+                                        chatId: chat._id,
+                                        userId: me._id
+                                    });
+
+                                    setUnreadCounts(prev => ({
+                                        ...prev,
+                                        [chat._id]: 0
+                                    }));
+                                }}
+                            >
 
                                 {/* Name */}
-                                <div style={{ fontWeight: "bold" }}>
-                                    {chat.isGroup
-                                        ? chat.name
-                                        : otherUser
-                                            ? (otherUser.name || otherUser.email)
-                                            : "Unknown User"}
+                                <div style={{ fontWeight: "bold", display: "flex", justifyContent: "space-between" }}>
+                                    <span>
+                                        {chat.isGroup
+                                            ? chat.name
+                                            : otherUser
+                                                ? (otherUser.name || otherUser.email)
+                                                : "Unknown User"}
+                                    </span>
+
+                                    {unreadCounts[chat._id] > 0 && (
+                                        <span style={{
+                                            background: "red",
+                                            color: "white",
+                                            borderRadius: "50%",
+                                            padding: "4px 8px",
+                                            fontSize: "12px"
+                                        }}>
+                                            {unreadCounts[chat._id]}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Last Message */}
