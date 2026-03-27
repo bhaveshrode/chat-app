@@ -284,21 +284,24 @@ export const ChatPage = () => {
                             </span>
                         </div>
 
-                        <button
-                            onClick={async () => {
-                                await api.delete(`/users/${user._id}`);
-                                setUsers(prev => prev.filter(u => u._id !== user._id));
-                            }}
-                            style={{
-                                background: "red",
-                                color: "white",
-                                border: "none",
-                                padding: "4px 8px",
-                                cursor: "pointer"
-                            }}
-                        >
-                            Delete
-                        </button>
+                        {/* ❗ Only show delete if NOT current user */}
+                        {user._id !== me._id && (
+                            <button
+                                onClick={async () => {
+                                    await api.delete(`/users/${user._id}`);
+                                    setUsers(prev => prev.filter(u => u._id !== user._id));
+                                }}
+                                style={{
+                                    background: "red",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "4px 8px",
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Delete
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>
