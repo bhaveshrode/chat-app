@@ -54,7 +54,8 @@ export const registerSocketHandlers = (io) => {
                     chatId: chatId,
                     senderId: message.sender,
                     text: message.text,
-                    status: "sent"
+                    status: "sent",
+                    seenBy: [message.sender]
                 });
 
                 await Chat.findByIdAndUpdate(chatId, {
@@ -83,6 +84,24 @@ export const registerSocketHandlers = (io) => {
         socket.on('message:seen', async ({ messageId, userId, chatId }) => {
             await Message.findByIdAndUpdate(messageId, { $addToSet: { seenBy: userId } });
             io.to(chatId).emit('message:seen', { messageId, userId });
+        });
+
+        socket.on("chat:markSeen", async ({ chatId, userId }) => {
+            try {
+                await Message.updateMany(
+                    {
+                        chatId,
+                        seenBy: { $ne: userId }
+                    },
+                    {
+                        $addToSet: { seenBy: userId }
+                    }
+                );
+
+                io.to(chatId).emit("chat:seenUpdate", { chatId });
+            } catch (err) {
+                console.error("Seen update error:", err);
+            }
         });
 
         socket.on('disconnect', async () => {
