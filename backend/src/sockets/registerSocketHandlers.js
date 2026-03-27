@@ -28,7 +28,22 @@ export const registerSocketHandlers = (io) => {
             await User.findByIdAndUpdate(userId, { lastSeenAt: new Date() });
         });
 
-        socket.on('chat:join', (chatId) => {
+        socket.on('chat:join', async (chatId) => {
+            await Message.updateMany(
+                {
+                    chatId: chatId,
+                    senderId: { $ne: socket.data.userId },
+                    status: { $ne: "seen" }
+                },
+                { status: "seen" }
+            );
+
+            // notify sender
+            io.to(chatId).emit("message:seen", {
+                chatId,
+                userId: socket.data.userId
+            });
+
             console.log(`User joined room: ${chatId}`);
             socket.join(chatId);
         });
@@ -39,6 +54,7 @@ export const registerSocketHandlers = (io) => {
                     chatId: chatId,
                     senderId: message.sender,
                     text: message.text,
+                    status: "sent"
                 });
 
                 await Chat.findByIdAndUpdate(chatId, {
@@ -46,6 +62,10 @@ export const registerSocketHandlers = (io) => {
                 });
 
                 io.to(chatId).emit('message:new', savedMessage);
+
+                await Message.findByIdAndUpdate(savedMessage._id, {
+                    status: "delivered"
+                });
             }
             catch(err){
                 console.error("❌ Error saving message:", err);
