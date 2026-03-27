@@ -30,7 +30,11 @@ export const ChatPage = () => {
     const [users, setUsers] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState({});
 
-    const hasEmitted = useRef(false)
+    const hasEmitted = useRef(false);
+    const [deleteChatPopup, setDeleteChatPopup] = useState({
+        visible: false,
+        chatId: null
+    });
 
     useEffect(() => {
         if (!token) return;
@@ -188,7 +192,6 @@ export const ChatPage = () => {
                     return (
                         <div
                             key={chat._id}
-                            onClick={() => setActiveChatId(chat._id)}
                             style={{
                                 padding: "10px",
                                 cursor: "pointer",
@@ -198,22 +201,51 @@ export const ChatPage = () => {
                                 borderRadius: "5px"
                             }}
                         >
-                            {/* Name */}
-                            <div style={{ fontWeight: "bold" }}>
-                                {chat.isGroup ? chat.name : otherUser ? (otherUser.name || otherUser.email) : "Unknown User"}
+                            {/* CLICK AREA */}
+                            <div onClick={() => setActiveChatId(chat._id)}>
+
+                                {/* Name */}
+                                <div style={{ fontWeight: "bold" }}>
+                                    {chat.isGroup
+                                        ? chat.name
+                                        : otherUser
+                                            ? (otherUser.name || otherUser.email)
+                                            : "Unknown User"}
+                                </div>
+
+                                {/* Last Message */}
+                                <div style={{ fontSize: "12px", color: "#aaa" }}>
+                                    {chat.lastMessage?.text || "No messages yet"}
+                                </div>
+
+                                {/* Time */}
+                                <div style={{ fontSize: "10px", color: "#777" }}>
+                                    {chat.lastMessage?.createdAt
+                                        ? formatSidebarTime(chat.lastMessage.createdAt)
+                                        : ""}
+                                </div>
                             </div>
 
-                            {/* Last Message */}
-                            <div style={{ fontSize: "12px", color: "#aaa" }}>
-                                {chat.lastMessage?.text || "No messages yet"}
-                            </div>
-
-                            <div style={{ fontSize: "10px", color: "#777" }}>
-                                {chat.lastMessage?.createdAt
-                                    ? formatSidebarTime(chat.lastMessage.createdAt)
-                                    : ""
-                                }
-                            </div>
+                            {/* DELETE BUTTON (outside click area) */}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteChatPopup({
+                                        visible: true,
+                                        chatId: chat._id
+                                    });
+                                }}
+                                style={{
+                                    marginTop: "5px",
+                                    background: "red",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "3px 6px",
+                                    cursor: "pointer"
+                                }}
+                            >
+                                Delete
+                            </button>
                         </div>
                     );
                 })}
@@ -314,6 +346,74 @@ export const ChatPage = () => {
                 )}
             </div>
 
+                    {deleteChatPopup.visible && (
+                        <div style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            background: "rgba(0,0,0,0.6)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 1000
+                        }}>
+                            <div style={{
+                                background: "#222",
+                                padding: "20px",
+                                borderRadius: "10px",
+                                textAlign: "center"
+                            }}>
+                                <h3 style={{ color: "white" }}>Delete Chat?</h3>
+
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await api.delete(`/chats/${deleteChatPopup.chatId}`);
+
+                                            // Remove from UI instantly
+                                            setChats(prev =>
+                                                prev.filter(c => c._id !== deleteChatPopup.chatId)
+                                            );
+
+                                            // Reset active chat
+                                            if (activeChatId === deleteChatPopup.chatId) {
+                                                setActiveChatId(null);
+                                            }
+
+                                            setDeleteChatPopup({ visible: false, chatId: null });
+                                        } catch (err) {
+                                            console.error("Delete chat error:", err);
+                                        }
+                                    }}
+                                    style={{
+                                        background: "red",
+                                        color: "white",
+                                        border: "none",
+                                        padding: "6px 12px",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    Delete
+                                </button>
+
+                                <br /><br />
+
+                                <button
+                                    onClick={() =>
+                                        setDeleteChatPopup({ visible: false, chatId: null })
+                                    }
+                                    style={{
+                                        padding: "6px 12px",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
         </div>
     );
 };
