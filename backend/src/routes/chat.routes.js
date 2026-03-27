@@ -1,5 +1,6 @@
 import express from 'express';
 import { Chat } from '../models/Chat.js';
+import { Message } from "../models/Message.js";
 
 export const chatRouter = express.Router();
 
@@ -39,4 +40,13 @@ chatRouter.post('/', async (req, res) => {
     }
 
     res.status(201).json(chat);
+});
+
+chatRouter.delete("/:chatId", async (req, res) => {
+    const { chatId } = req.params;
+
+    await Message.deleteMany({ chatId });
+    await Chat.findByIdAndDelete(chatId);
+
+    res.json({ message: "Chat deleted" });
 });
