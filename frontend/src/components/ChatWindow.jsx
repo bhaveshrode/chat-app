@@ -25,6 +25,10 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [messages, setMessages] = useState([]);
     const [typingUsers, setTypingUsers] = useState({});
     const [typingTimeout, setTypingTimeout] = useState(null);
+    const [deletePopup, setDeletePopup] = useState({
+        visible: false,
+        messageId: null
+    });
 
     const getUserName = (id) => {
         const user = users.find(u =>u._id === id);
@@ -106,6 +110,35 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         return () => socket.off("message:seen", handleSeen);
     }, [activeChatId]);
 
+    useEffect(() => {
+        const handleDelete = ({ messageId, type }) => {
+            setMessages(prev =>
+                prev.map(msg => {
+                    if (msg._id !== messageId) return msg;
+
+                    if (type === "everyone") {
+                        return {
+                            ...msg,
+                            text: "This message was deleted",
+                            isDeleted: true
+                        };
+                    }
+
+                    return msg;
+                })
+                    .filter(msg => {
+                        if (msg._id === messageId && type === "me") {
+                            return false;
+                        }
+                        return true;
+                    })
+            );
+        };
+
+        socket.on("message:deleted", handleDelete);
+        return () => socket.off("message:deleted", handleDelete);
+    }, []);
+
     // Send message
     const sendMessage = () => {
         if (!text.trim() || !activeChatId) return;
@@ -179,6 +212,19 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                 >
                                     <div>{msg.text}</div>
 
+                                    {msg.senderId === me._id && !msg.isDeleted && (
+                                        <div style={{ marginTop: "5px" }}>
+                                            <button onClick={() => {
+                                                setDeletePopup({
+                                                    visible: true,
+                                                    messageId: msg._id
+                                                });
+                                            }}>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {/* Time */}
                                     <div style={{
                                         fontSize: "10px",
@@ -246,6 +292,64 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
             />
 
             <button onClick={sendMessage}>Send</button>
+
+            {deletePopup.visible && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    background: "rgba(0,0,0,0.6)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        background: "#222",
+                        padding: "20px",
+                        borderRadius: "10px",
+                        textAlign: "center"
+                    }}>
+                        <h4 style={{ color: "white" }}>Delete Message?</h4>
+
+                        <button onClick={() => {
+                            socket.emit("message:delete", {
+                                messageId: deletePopup.messageId,
+                                type: "me",
+                                userId: me._id,
+                                chatId: activeChatId
+                            });
+                            setDeletePopup({ visible: false, messageId: null });
+                        }}>
+                            Delete for Me
+                        </button>
+
+                        <br /><br />
+
+                        <button onClick={() => {
+                            socket.emit("message:delete", {
+                                messageId: deletePopup.messageId,
+                                type: "everyone",
+                                userId: me._id,
+                                chatId: activeChatId
+                            });
+                            setDeletePopup({ visible: false, messageId: null });
+                        }}>
+                            Delete for Everyone
+                        </button>
+
+                        <br /><br />
+
+                        <button onClick={() => {
+                            setDeletePopup({ visible: false, messageId: null });
+                        }}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
         </section>
     );
 };
