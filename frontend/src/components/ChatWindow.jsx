@@ -20,9 +20,16 @@ const formatMessageDate = (date) => {
     return d.toLocaleDateString(); // e.g. 20/03/2026
 };
 
-export const ChatWindow = ({ socket, activeChatId, me }) => {
+export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [text, setText] = useState("");
     const [messages, setMessages] = useState([]);
+    const [typingUsers, setTypingUsers] = useState({});
+    const [typingTimeout, setTypingTimeout] = useState(null);
+
+    const getUserName = (id) => {
+        const user = users.find(u =>u._id === id);
+        return user?.name || user?.email || "User";
+    };
 
     // Receive messages
     useEffect(() => {
@@ -57,6 +64,30 @@ export const ChatWindow = ({ socket, activeChatId, me }) => {
                 console.error("❌ Fetch error:", err);
             });
     }, [activeChatId]);
+
+    useEffect(() => {
+        const handleTypingStart = ({ userId }) => {
+            setTypingUsers(prev => ({
+                ...prev,
+                [userId]: true
+            }));
+        };
+
+        const handleTypingStop = ({ userId }) => {
+            setTypingUsers(prev => ({
+                ...prev,
+                [userId]: false
+            }));
+        };
+
+        socket.on("typing:start", handleTypingStart);
+        socket.on("typing:stop", handleTypingStop);
+
+        return () => {
+            socket.off("typing:start", handleTypingStart);
+            socket.off("typing:stop", handleTypingStop);
+        };
+    }, []);
 
     // Send message
     const sendMessage = () => {
@@ -147,12 +178,43 @@ export const ChatWindow = ({ socket, activeChatId, me }) => {
                 })}
             </div>
 
-            {/* INPUT AREA */}
+            {Object.entries(typingUsers)
+                .filter(([_, isTyping]) => isTyping)
+                .map(([userId]) => (
+                    userId !== me._id && (
+                        <div
+                            key={userId}
+                            style={{ color: "gray", fontSize: "12px", marginBottom: "5px" }}
+                        >
+                            {getUserName(userId)} is typing...
+                        </div>
+                    )
+                ))
+            }
+
+            {/* Input Area */}
             <input
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Type a message"
-                style={{ width: "70%" }}
+                onChange={(e) => {
+                    setText(e.target.value);
+
+                    socket.emit("typing:start", {
+                        chatId: activeChatId,
+                        userId: me._id
+                    });
+
+                    // Stop typing after delay
+                    if (typingTimeout) clearTimeout(typingTimeout);
+
+                    const timeout = setTimeout(() => {
+                        socket.emit("typing:stop", {
+                            chatId: activeChatId,
+                            userId: me._id
+                        });
+                    }, 1000);
+
+                    setTypingTimeout(timeout);
+                }}
             />
 
             <button onClick={sendMessage}>Send</button>
