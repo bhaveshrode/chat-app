@@ -95,5 +95,33 @@ export const registerSocketHandlers = (io) => {
             io.emit('presence:update', { userId, online: false });
             await User.findByIdAndUpdate(userId, { lastSeenAt: new Date() });
         });
+
+        socket.on("message:delete", async ({ messageId, type, userId, chatId }) => {
+            try {
+                if (type === "everyone") {
+                    await Message.findByIdAndUpdate(messageId, {
+                        isDeleted: true,
+                        text: "This message was deleted"
+                    });
+
+                    io.to(chatId).emit("message:deleted", {
+                        messageId,
+                        type: "everyone"
+                    });
+
+                } else if (type === "me") {
+                    await Message.findByIdAndUpdate(messageId, {
+                        $addToSet: { deletedFor: userId }
+                    });
+
+                    socket.emit("message:deleted", {
+                        messageId,
+                        type: "me"
+                    });
+                }
+            } catch (err) {
+                console.error("❌ Delete error:", err);
+            }
+        });
     });
 };
