@@ -306,6 +306,7 @@ export const ChatPage = () => {
                             socket={socket}
                             activeChatId={activeChatId}
                             me={me}
+                            users={users}
                         />
                     </>
                 ) : (
