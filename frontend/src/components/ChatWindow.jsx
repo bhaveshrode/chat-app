@@ -89,6 +89,23 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         };
     }, []);
 
+    useEffect(() => {
+        const handleSeen = ({ chatId }) => {
+            if (chatId !== activeChatId) return;
+
+            setMessages(prev =>
+                prev.map(msg => ({
+                    ...msg,
+                    status: "seen"
+                }))
+            );
+        };
+
+        socket.on("message:seen", handleSeen);
+
+        return () => socket.off("message:seen", handleSeen);
+    }, [activeChatId]);
+
     // Send message
     const sendMessage = () => {
         if (!text.trim() || !activeChatId) return;
@@ -170,6 +187,17 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                         textAlign: "right"
                                     }}>
                                         {formatMessageTime(msg.createdAt)}
+                                    </div>
+
+                                    <div style={{
+                                        fontSize: "10px",
+                                        color: msg.status === "seen" ? "dodgerblue" : "#aaa",
+                                        marginTop: "2px",
+                                        textAlign: "right"
+                                    }}>
+                                        {msg.status === "seen" && "✔✔"}
+                                        {msg.status === "delivered" && "✔✔"}
+                                        {msg.status === "sent" && "✔"}
                                     </div>
                                 </div>
                             </div>
