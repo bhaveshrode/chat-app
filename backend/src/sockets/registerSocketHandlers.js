@@ -144,5 +144,41 @@ export const registerSocketHandlers = (io) => {
                 console.error("❌ Delete error:", err);
             }
         });
+
+        socket.on("message:react", async ({ messageId, userId, emoji }) => {
+            try {
+                const message = await Message.findById(messageId);
+
+                if (!message) return;
+
+                // Ensure reactions exists
+                if (!message.reactions) {
+                    message.reactions = [];
+                }
+
+                // Check if user already reacted
+                const existing = message.reactions.find(
+                    r => r.user.toString() === userId
+                );
+
+                if (existing) {
+                    // Update emoji
+                    existing.emoji = emoji;
+                } else {
+                    // Add new reaction
+                    message.reactions.push({ user: userId, emoji });
+                }
+
+                await message.save();
+
+                io.to(message.chatId.toString()).emit("message:reaction", {
+                    messageId,
+                    reactions: message.reactions
+                });
+
+            } catch (err) {
+                console.error("Reaction error:", err);
+            }
+        });
     });
 };
