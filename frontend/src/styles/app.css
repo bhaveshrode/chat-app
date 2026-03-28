@@ -28,3 +28,7 @@ input {
   width: 100%;
   max-width: 360px;
 }
+
+.download-overlay:hover {
+    opacity: 1 !important;
+}
