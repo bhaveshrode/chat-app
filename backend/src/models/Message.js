@@ -15,10 +15,12 @@ const messageSchema = new mongoose.Schema(
         text: String,
         fileUrl: String,
         fileType: String,
-        seenBy: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        }],
+        seenBy: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }
+        ],
         status: {
             type: String,
             enum: ["sent", "delivered", "seen"],
@@ -28,10 +30,21 @@ const messageSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        deletedFor: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        }]
+        deletedFor: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }
+        ],
+        reactions: [
+            {
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'User'
+                },
+                emoji: String
+            }
+        ]
     },
     {
         timestamps: true
