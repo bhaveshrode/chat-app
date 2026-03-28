@@ -5,15 +5,18 @@ import { authRouter } from './routes/auth.routes.js';
 import { authMiddleware } from './middleware/auth.js';
 import { chatRouter } from './routes/chat.routes.js';
 import { messageRouter } from './routes/message.routes.js';
-
 import userRoutes from "./routes/user.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
+import downloadRoutes from "./routes/download.routes.js";
 
 export const createApp = () => {
     const app = express();
 
     app.use(cors({ origin: env.clientUrl }));
     app.use(express.json());
-    app.use('/uploads', express.static(env.uploadDir));
+    app.use('/uploads', express.static("uploads"));
+    app.use("/api/upload", uploadRoutes);
+    app.use("/api", downloadRoutes);
 
     app.get("/", (_req, res) => {
         res.send("Backend is running");
