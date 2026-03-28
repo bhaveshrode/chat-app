@@ -1,51 +1,88 @@
-# 💬 Real-Time Chat Application
+# 💬 Real-Time Chat Application (WhatsApp Clone)
 
-A full-stack real-time chat application inspired by WhatsApp, built using modern web technologies with features like private messaging, online presence, typing indicators, message status (sent/delivered/seen), and message deletion.
+A full-stack real-time chat application inspired by WhatsApp, built using modern web technologies.  
+Supports messaging, file sharing, reactions, online presence, typing indicators, and advanced chat management.
 
 ---
 
 ## 🚀 Features
 
 ### 🔐 Authentication
-- JWT-based authentication
-- Secure login system
+- JWT-based secure authentication
 - Protected routes
+- User session management
 
-### 💬 Messaging
-- Real-time messaging using Socket.IO
-- Private one-to-one chat system
+---
+
+### 💬 Real-Time Messaging
+- One-to-one private chats
+- Real-time communication using Socket.IO
 - Persistent chat history (MongoDB)
 
-### 👀 Message Status
+---
+
+### 📂 File & Image Sharing
+- Upload and send files/images
+- Image preview inside chat
+- File preview (PDF, text, etc.)
+- Download support for all files
+- File URLs stored in database
+
+---
+
+### 👀 Message Status System
 - Sent ✔
 - Delivered ✔✔
-- Seen ✔✔ (blue ticks)
+- Seen ✔✔ (Blue ticks)
+- Real-time updates
+
+---
 
 ### ⌨️ Typing Indicator
-- Shows "{username} is typing..."
-- Real-time updates using WebSockets
+- Shows: **"{username} is typing..."**
+- Real-time typing events using WebSockets
+
+---
 
 ### 🟢 Online Presence
-- Shows online/offline status
-- Real-time updates across users
+- Live online/offline status
+- Sync across all users in real-time
 
-### 🗑️ Message Deletion
+---
+
+### 🗑️ Message Deletion (WhatsApp Style)
 - Delete for Me
 - Delete for Everyone
-- Synced across users
+- Synced instantly across users
+
+---
 
 ### 🧹 Chat Management
-- Create new chats
+- Create chats
 - Delete chats (with confirmation popup)
+- Sidebar chat preview (last message + time)
 
-### 📅 Date & Time
-- Smart timestamps (Today, Yesterday, Date format)
-- Message grouping by date
+---
+
+### 😊 Message Reactions
+- React to messages with emojis ❤️😂👍😮😢
+- Real-time reaction updates
+- Aggregated reaction counts
+
+---
+
+### 📅 Smart Date & Time
+- Today / Yesterday logic
+- Full date for older messages
+- Time shown per message
+
+---
 
 ### 🎨 UI/UX
-- Dark/Light mode toggle
-- Sidebar with chat list
-- User list with online indicators
+- Dark / Light mode toggle
+- WhatsApp-style chat bubbles
+- Responsive layout
+- Clean sidebar + chat view
 
 ---
 
@@ -55,7 +92,7 @@ A full-stack real-time chat application inspired by WhatsApp, built using modern
 - React.js
 - Vite
 - Socket.IO Client
-- Context API (Theme Management)
+- Context API
 
 ### Backend
 - Node.js
@@ -67,62 +104,39 @@ A full-stack real-time chat application inspired by WhatsApp, built using modern
 - JWT Authentication
 - REST APIs
 - WebSockets
+- File Upload System (Multer)
 
 ---
 
 ## 📂 Project Structure
+
 ```text
 chat-app/
     backend/
         src/
             config/
-                db.js
-                env.js
             middleware/
-                auth.js
             models/
-                Chat.js
-                Message.js
-                User.js
             routes/
-                auth.routes.js
-                chat.routes.js
-                message.routes.js
-                user.routes.js
             sockets/
-                registerSocketHandlers.js
             utils/
-                jwt.js
             app.js
             server.js
-        .env
-        .env.example
-        package.json
+
     frontend/
         src/
             components/
-                ChatWindow.jsx
             context/
-                ThemeContext.jsx
             pages/
-                AuthPage.jsx
-                ChatPage.jsx
             services/
-                api.js
-                socket.js
             styles/
-                app.css
-            main.jsx
-        index.html
-        package.json
-        vite.config.js
-    README.md
-    
 ```
+
+---
 
 ## ⚙️ Installation
 
-### 1. Clone the repo
+### 1. Clone Repository
 
 ```bash
 git clone https://github.com/bhaveshrode/chat-app.git
@@ -149,12 +163,12 @@ npm run dev
 
 ## 🔐 Environment Variables
 
-Create `.env` in backend:
+Create `.env` inside backend:
 
 ```env
 PORT=5000
-MONGO_URI=mongodb://chatapp:chatapp123@ac-drpkqrj-shard-00-00.vyj4lgo.mongodb.net:27017,ac-drpkqrj-shard-00-01.vyj4lgo.mongodb.net:27017,ac-drpkqrj-shard-00-02.vyj4lgo.mongodb.net:27017/chat_app?ssl=true&replicaSet=atlas-njq079-shard-0&authSource=admin&retryWrites=true&w=majority
-JWT_SECRET=super-secret
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_secret
 CLIENT_URL=http://localhost:5173
 UPLOAD_DIR=uploads
 ```
@@ -163,19 +177,20 @@ UPLOAD_DIR=uploads
 
 ## 🧪 Testing
 
-- Open two browser tabs
+- Open two browser windows
 - Login with different users
-- Start chatting in real-time
+- Start real-time chatting
 
 ---
 
 ## 📌 Future Improvements
 
-- Unread message counter 🔴
+- ✅ Unread message counter (partially implemented)
 - Group chats
-- File/image sharing
+- Voice messages
+- Message editing
 - Push notifications
-- Message reactions
+- Cloud file storage (AWS S3 / Cloudinary)
 
 ---
 
