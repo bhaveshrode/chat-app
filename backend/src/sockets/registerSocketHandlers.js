@@ -53,7 +53,9 @@ export const registerSocketHandlers = (io) => {
                 const savedMessage = await Message.create({
                     chatId: chatId,
                     senderId: message.sender,
-                    text: message.text,
+                    text: message.text || "",
+                    fileUrl: message.fileUrl,
+                    fileType: message.fileType,
                     status: "sent",
                     seenBy: [message.sender]
                 });
