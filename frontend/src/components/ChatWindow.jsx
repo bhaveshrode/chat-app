@@ -29,6 +29,9 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         visible: false,
         messageId: null
     });
+    const [file, setFile] = useState(null);
+    const [previewFile, setPreviewFile] = useState(null);
+    const [previewUpload, setPreviewUpload] = useState(null);
 
     const getUserName = (id) => {
         const user = users.find(u =>u._id === id);
@@ -140,20 +143,39 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     }, []);
 
     // Send message
-    const sendMessage = () => {
-        if (!text.trim() || !activeChatId) return;
+    const sendMessage = async () => {
+        if (!activeChatId) return;
 
-        const message = {
-            text,
-            sender: me._id,
-        };
+        let fileData = null;
 
+        // Upload file if exists
+        if (file) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const res = await fetch("http://localhost:5000/api/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            fileData = await res.json();
+        }
+
+        // Send message via socket
         socket.emit("message:new", {
             chatId: activeChatId,
-            message,
+            message: {
+                sender: me._id,
+                text,
+                fileUrl: fileData?.fileUrl,
+                fileType: fileData?.fileType
+            }
         });
 
         setText("");
+        setFile(null);
+
+        setPreviewUpload(null);
     };
 
     return (
@@ -210,7 +232,69 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                         maxWidth: "60%"
                                     }}
                                 >
-                                    <div>{msg.text}</div>
+                                    <div>
+                                        {msg.text && <div>{msg.text}</div>}
+
+                                        {msg.fileUrl && (
+                                            msg.fileType?.startsWith("image") ? (
+                                                <div
+                                                    style={{
+                                                        position: "relative",
+                                                        display: "inline-block",
+                                                        marginTop: "5px"
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={`http://localhost:5000${msg.fileUrl}`}
+                                                        alt="file"
+                                                        style={{
+                                                            maxWidth: "200px",
+                                                            borderRadius: "10px",
+                                                            display: "block"
+                                                        }}
+                                                    />
+
+                                                    {/* Overlay */}
+                                                    <a
+                                                        href={`http://localhost:5000/api/download?file=${msg.fileUrl}`}
+                                                        style={{
+                                                            position: "absolute",
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            background: "rgba(0,0,0,0.4)",
+                                                            color: "white",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            fontSize: "24px",
+                                                            opacity: 0,
+                                                            textDecoration: "none",
+                                                            borderRadius: "10px",
+                                                            transition: "opacity 0.3s"
+                                                        }}
+                                                        className="download-overlay"
+                                                    >
+                                                        ⬇
+                                                    </a>
+                                                </div>
+                                            ) : (
+                                                <div style={{ marginTop: "5px" }}>
+                                                    <span
+                                                        onClick={() => setPreviewFile(msg)}
+                                                        style={{
+                                                            cursor: "pointer",
+                                                            color: "lightblue",
+                                                            textDecoration: "underline"
+                                                        }}
+                                                    >
+                                                        📎 {msg.fileUrl.split("/").pop()}
+                                                    </span>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
 
                                     {msg.senderId === me._id && !msg.isDeleted && (
                                         <div style={{ marginTop: "5px" }}>
@@ -277,7 +361,6 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                         userId: me._id
                     });
 
-                    // Stop typing after delay
                     if (typingTimeout) clearTimeout(typingTimeout);
 
                     const timeout = setTimeout(() => {
@@ -290,6 +373,68 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                     setTypingTimeout(timeout);
                 }}
             />
+
+            <br />
+
+            <input
+                type="file"
+                onChange={(e) => {
+                    const selected = e.target.files[0];
+                    setFile(selected);
+                    setPreviewUpload(selected);
+                }}
+            />
+
+            {previewUpload && (
+                <div style={{
+                    background: "#222",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    marginTop: "10px",
+                    color: "white"
+                }}>
+                    <p>Preview:</p>
+
+                    {/* IMAGE */}
+                    {previewUpload.type.startsWith("image") && (
+                        <img
+                            src={URL.createObjectURL(previewUpload)}
+                            style={{ maxWidth: "150px" }}
+                        />
+                    )}
+
+                    {/* PDF */}
+                    {previewUpload.type === "application/pdf" && (
+                        <iframe
+                            src={URL.createObjectURL(previewUpload)}
+                            style={{ width: "300px", height: "200px" }}
+                        />
+                    )}
+
+                    {/* TEXT */}
+                    {previewUpload.type.startsWith("text") && (
+                        <iframe
+                            src={URL.createObjectURL(previewUpload)}
+                            style={{
+                                width: "300px",
+                                height: "200px",
+                                background: "white"
+                            }}
+                        />
+                    )}
+
+                    {/* FALLBACK */}
+                    {!previewUpload.type.startsWith("image") &&
+                        previewUpload.type !== "application/pdf" &&
+                        !previewUpload.type.startsWith("text") && (
+                            <p>📎 {previewUpload.name}</p>
+                        )}
+
+                    <button onClick={() => setPreviewUpload(null)}>
+                        Cancel
+                    </button>
+                </div>
+            )}
 
             <button onClick={sendMessage}>Send</button>
 
@@ -346,6 +491,88 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                             setDeletePopup({ visible: false, messageId: null });
                         }}>
                             Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {previewFile && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    background: "rgba(0,0,0,0.9)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        background: "#111",
+                        padding: "20px",
+                        borderRadius: "10px",
+                        maxWidth: "90%",
+                        maxHeight: "90%",
+                        overflow: "auto",
+                        color: "white"
+                    }}>
+
+                        <h3>Preview</h3>
+
+                        {/* IMAGE */}
+                        {previewFile.fileType?.startsWith("image") && (
+                            <img
+                                src={`http://localhost:5000${previewFile.fileUrl}`}
+                                style={{ maxWidth: "100%" }}
+                            />
+                        )}
+
+                        {/* PDF PREVIEW (FIRST PAGE STYLE) */}
+                        {previewFile.fileType === "application/pdf" && (
+                            <iframe
+                                src={`http://localhost:5000${previewFile.fileUrl}`}
+                                style={{ width: "600px", height: "500px" }}
+                            />
+                        )}
+
+                        {/* TEXT FILE */}
+                        {previewFile.fileType?.startsWith("text") && (
+                            <iframe
+                                src={`http://localhost:5000${previewFile.fileUrl}`}
+                                style={{
+                                    width: "600px",
+                                    height: "400px",
+                                    background: "white"
+                                }}
+                            />
+                        )}
+
+                        {/* OTHER FILES */}
+                        {!previewFile.fileType && (
+                            <p>Preview not available</p>
+                        )}
+
+                        <br />
+
+                        <a
+                            href={`http://localhost:5000/api/download?file=${previewFile.fileUrl}`}
+                            style={{
+                                background: "#4CAF50",
+                                padding: "10px",
+                                borderRadius: "5px",
+                                color: "white",
+                                textDecoration: "none"
+                            }}
+                        >
+                            ⬇ Download File
+                        </a>
+
+                        <br /><br />
+
+                        <button onClick={() => setPreviewFile(null)}>
+                            Close
                         </button>
                     </div>
                 </div>
