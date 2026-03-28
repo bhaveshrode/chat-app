@@ -32,6 +32,9 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [file, setFile] = useState(null);
     const [previewFile, setPreviewFile] = useState(null);
     const [previewUpload, setPreviewUpload] = useState(null);
+    const [activeReaction, setActiveReaction] = useState(null);
+
+    const emojis = ["❤️", "😂", "👍", "😮", "😢"];
 
     const getUserName = (id) => {
         const user = users.find(u =>u._id === id);
@@ -142,6 +145,22 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         return () => socket.off("message:deleted", handleDelete);
     }, []);
 
+    useEffect(() => {
+        const handleReaction = ({ messageId, reactions }) => {
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg._id === messageId
+                        ? { ...msg, reactions }
+                        : msg
+                )
+            );
+        };
+
+        socket.on("message:reaction", handleReaction);
+
+        return () => socket.off("message:reaction", handleReaction);
+    }, []);
+
     // Send message
     const sendMessage = async () => {
         if (!activeChatId) return;
@@ -179,7 +198,10 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     };
 
     return (
-        <section style={{ marginTop: "20px" }}>
+        <section style={{
+            marginTop: "20px",
+            overflowX: "visible"
+        }}>
 
             {/* Message Display Area */}
             <div
@@ -229,7 +251,9 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                         borderRadius: "10px",
                                         display: "inline-block",
                                         color: "white",
-                                        maxWidth: "60%"
+                                        maxWidth: "60%",
+                                        wordBreak: "break-word",
+                                        overflow: "hidden"
                                     }}
                                 >
                                     <div>
@@ -296,7 +320,7 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                         )}
                                     </div>
 
-                                    {msg.senderId === me._id && !msg.isDeleted && (
+                                    {!msg.isDeleted && (
                                         <div style={{ marginTop: "5px" }}>
                                             <button onClick={() => {
                                                 setDeletePopup({
@@ -306,6 +330,81 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                             }}>
                                                 Delete
                                             </button>
+
+                                            <div style={{ position: "relative", display: "inline-block" }}>
+                                                <button onClick={() =>
+                                                    setActiveReaction(activeReaction === msg._id ? null : msg._id)
+                                                }>
+                                                    😊
+                                                </button>
+
+                                                {activeReaction === msg._id && (
+                                                    <div style={{
+                                                        position: "absolute",
+                                                        bottom: "40px",
+                                                        right: msg.senderId === me._id ? "0" : "auto",
+                                                        left: msg.senderId === me._id ? "auto" : "0",
+                                                        transform: msg.senderId === me._id ? "translateX(-10%)" : "translateX(10%)",
+                                                        background: "#222",
+                                                        padding: "6px 10px",
+                                                        borderRadius: "25px",
+                                                        display: "flex",
+                                                        gap: "8px",
+                                                        whiteSpace: "nowrap",
+                                                        minWidth: "max-content",
+                                                        boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                                                        zIndex: 10
+                                                    }}>
+                                                        {emojis.map(e => (
+                                                            <span
+                                                                key={e}
+                                                                style={{
+                                                                    cursor: "pointer",
+                                                                    fontSize: "18px"
+                                                                }}
+                                                                onClick={() => {
+                                                                    socket.emit("message:react", {
+                                                                        messageId: msg._id,
+                                                                        userId: me._id,
+                                                                        emoji: e
+                                                                    });
+                                                                    setActiveReaction(null);
+                                                                }}
+                                                            >
+                                                                {e}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {msg.reactions && msg.reactions.length > 0 && (
+                                        <div style={{
+                                            marginTop: "5px",
+                                            display: "flex",
+                                            gap: "5px",
+                                            flexWrap: "wrap",
+                                            maxWidth: "100%",
+                                            overflow: "hidden"
+                                        }}>
+                                            {Object.entries(
+                                                msg.reactions.reduce((acc, r) => {
+                                                    acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                                                    return acc;
+                                                }, {})
+                                            ).map(([emoji, count]) => (
+                                                <span key={emoji} style={{
+                                                    background: "#333",
+                                                    padding: "3px 8px",
+                                                    borderRadius: "12px",
+                                                    fontSize: "12px",
+                                                    whiteSpace: "nowrap"
+                                                }}>
+                                                    {emoji} {count}
+                                                </span>
+                                            ))}
                                         </div>
                                     )}
 
