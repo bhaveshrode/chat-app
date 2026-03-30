@@ -182,5 +182,23 @@ export const registerSocketHandlers = (io) => {
                 reactions: msg.reactions
             });
         });
+
+        socket.on("message:edit", async ({ messageId, newText, chatId }) => {
+            try {
+                const updated = await Message.findByIdAndUpdate(
+                    messageId,
+                    {
+                        text: newText,
+                        isEdited: true
+                    },
+                    { new: true }
+                );
+
+                io.to(chatId).emit("message:updated", updated);
+
+            } catch (err) {
+                console.error("Edit error:", err);
+            }
+        });
     });
 };
