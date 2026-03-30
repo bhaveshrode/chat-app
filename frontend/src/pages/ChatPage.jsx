@@ -35,6 +35,12 @@ export const ChatPage = () => {
         chatId: null
     });
     const [unreadCounts, setUnreadCounts] = useState({});
+    const activeChat = chats.find(c => c._id === activeChatId);
+    const otherUser = activeChat?.members?.find(m => m._id !== me._id);
+
+    const isOnline = otherUser?._id
+        ? onlineUsers[otherUser._id]
+        : false;
 
     useEffect(() => {
         if (!token) return;
@@ -197,6 +203,16 @@ export const ChatPage = () => {
         }
     };
 
+    const deleteChat = async (chatId) => {
+        await api.delete(`/chats/${chatId}`);
+
+        setChats(prev => prev.filter(c => c._id !== chatId));
+
+        if (activeChatId === chatId) {
+            setActiveChatId(null);
+        }
+    };
+
     if (!token) {
         return (
             <main>
@@ -209,23 +225,23 @@ export const ChatPage = () => {
     if (!me) return <p>Loading...</p>;
 
     return (
-        <div className="flex h-screen bg-slate-900 text-white overflow-hidden">
+        <div className="flex h-screen bg-white text-black dark:bg-slate-900 dark:text-white overflow-hidden">
 
             {/* Sidebar */}
-            <div className="w-72 bg-slate-800 p-4 flex flex-col">
+            <div className="w-72 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white p-4 flex flex-col">
 
                 <h2 className="text-xl font-bold mb-4">Chats</h2>
 
                 <button
                     onClick={toggleTheme}
-                    className="mb-3 bg-slate-700 p-2 rounded-lg"
+                    className="mb-3 bg-gray-300 dark:bg-slate-700 text-black dark:text-white p-2 rounded-lg"
                 >
                     Toggle Theme
                 </button>
 
                 <button
                     onClick={createChat}
-                    className="bg-green-500 hover:bg-green-600 p-2 rounded-lg mb-4"
+                    className="bg-green-500 text-white hover:bg-green-600 p-2 rounded-lg mb-4"
                 >
                     + Create Chat
                 </button>
@@ -240,8 +256,8 @@ export const ChatPage = () => {
                                 onClick={() => setActiveChatId(chat._id)}
                                 className={`p-3 rounded-lg cursor-pointer ${
                                     activeChatId === chat._id
-                                        ? "bg-slate-700"
-                                        : "hover:bg-slate-700"
+                                        ? "bg-gray-300 dark:bg-slate-700"
+                                        : "hover:bg-gray-200 dark:hover:bg-slate-700"
                                 }`}
                             >
                                 <div className="flex justify-between">
@@ -249,6 +265,15 @@ export const ChatPage = () => {
                                 {otherUser?.name || otherUser?.email}
                             </span>
 
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteChat(chat._id);
+                                        }}
+                                        className="text-xs text-red-400"
+                                    >
+                                        🗑
+                                    </button>
                                     {unreadCounts[chat._id] > 0 && (
                                         <span className="bg-red-500 px-2 rounded-full text-xs">
                                     {unreadCounts[chat._id]}
@@ -274,8 +299,12 @@ export const ChatPage = () => {
                         Chat
                     </span>
 
-                    <span className="text-sm text-gray-400">
-                        Online
+                    <span className={`text-sm font-medium ${
+                        isOnline
+                            ? "text-green-500"
+                            : "text-gray-600 dark:text-gray-400"
+                    }`}>
+                        {isOnline ? "Online" : "Offline"}
                     </span>
                 </div>
 
