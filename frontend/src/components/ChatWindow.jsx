@@ -37,6 +37,8 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [deleteMenu, setDeleteMenu] = useState(null);
+    const [editingMessageId, setEditingMessageId] = useState(null);
+    const [editingText, setEditingText] = useState("");
 
     const emojis = ["❤️", "😂", "👍", "😮", "😢"];
 
@@ -308,7 +310,44 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                     </div>
                                 ) : (
                                     <>
-                                        {msg.text && <div>{msg.text}</div>}
+                                        {editingMessageId === msg._id ? (
+                                            <div className="flex gap-2 mt-1">
+                                                <input
+                                                    value={editingText}
+                                                    onChange={(e) => setEditingText(e.target.value)}
+                                                    className="flex-1 px-2 py-1 rounded bg-slate-100 text-black dark:bg-slate-700 dark:text-white outline-none"
+                                                />
+
+                                                <button
+                                                    onClick={() => {
+                                                        socket.emit("message:edit", {
+                                                            messageId: msg._id,
+                                                            newText: editingText,
+                                                            chatId: activeChatId
+                                                        });
+
+                                                        setEditingMessageId(null);
+                                                    }}
+                                                    className="bg-white text-green-600 px-2 py-1 rounded text-xs font-semibold hover:bg-gray-100"
+                                                >
+                                                    Save
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setEditingMessageId(null)}
+                                                    className="text-white/70 hover:text-red-300 text-xs"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {msg.text && <div>{msg.text}</div>}
+                                                {msg.isEdited && (
+                                                    <span className="text-xs ml-1 opacity-70">(edited)</span>
+                                                )}
+                                            </>
+                                        )}
                                     </>
                                 )}
 
@@ -345,6 +384,18 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                         className="text-xs text-red-300 mt-1"
                                     >
                                         Delete
+                                    </button>
+                                )}
+
+                                {!msg.isDeleted && isMe && (
+                                    <button
+                                        onClick={() => {
+                                            setEditingMessageId(msg._id);
+                                            setEditingText(msg.text);
+                                        }}
+                                        className="text-xs text-white/80 hover:text-white underline mt-1 mr-2"
+                                    >
+                                        Edit
                                     </button>
                                 )}
 
