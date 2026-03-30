@@ -44,6 +44,7 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [activeReaction, setActiveReaction] = useState(null);
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
+    const [deleteMenu, setDeleteMenu] = useState(false);
 
     const emojis = ["❤️", "😂", "👍", "😮", "😢"];
 
@@ -219,11 +220,34 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         e.preventDefault();
     };
 
+    const handleDeleteForMe = (messageId) => {
+        setMessages(prev =>
+            prev.map(msg =>
+                msg._id === messageId
+                    ? { ...msg, deletedFor: [...(msg.deletedFor || []), me._id] }
+                    : msg
+            )
+        );
+
+        setDeleteMenu(null);
+    };
+
+    const handleDeleteForEveryone = (messageId) => {
+        socket.emit("message:delete", {
+            messageId,
+            type: "everyone",
+            userId: me._id,
+            chatId: activeChatId
+        });
+
+        setDeleteMenu(null);
+    };
+
     return (
         <section className="flex flex-col h-full overflow-hidden">
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto overflow-x-visible p-4 space-y-4 bg-white dark:bg-slate-800 rounded-lg">
+            <div className="flex-1 overflow-y-auto overflow-x-visible p-4 space-y-4 bg-white dark:bg-slate-800 rounded-lg relative">
                 {messages.length === 0 && (
                     <p className="text-gray-400 text-center">No messages yet</p>
                 )}
@@ -285,18 +309,43 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
 
                                 {!msg.isDeleted && (
                                     <button
-                                        onClick={() =>
-                                            socket.emit("message:delete", {
-                                                messageId: msg._id,
-                                                type: "everyone",
-                                                userId: me._id,
-                                                chatId: activeChatId
-                                            })
-                                        }
+                                        onClick={() => setDeleteMenu(msg._id)}
                                         className="text-xs text-red-300 mt-1"
                                     >
                                         Delete
                                     </button>
+                                )}
+
+                                {deleteMenu === msg._id && (
+                                    <div className={`absolute mt-1 ${
+                                        isMe ? "right-0" : "left-0"
+                                    } bg-white dark:bg-slate-700 shadow-lg rounded-lg p-2 z-50`}>
+
+                                        <button
+                                            className="block w-full text-left px-3 py-1 hover:bg-gray-200 dark:hover:bg-slate-600 text-sm"
+                                            onClick={() => {
+                                                handleDeleteForMe(msg._id);
+                                            }}
+                                        >
+                                            Delete for Me
+                                        </button>
+
+                                        <button
+                                            className="block w-full text-left px-3 py-1 hover:bg-gray-200 dark:hover:bg-slate-600 text-sm"
+                                            onClick={() => {
+                                                handleDeleteForEveryone(msg._id);
+                                            }}
+                                        >
+                                            Delete for Everyone
+                                        </button>
+
+                                        <button
+                                            className="block w-full text-left px-3 py-1 text-red-500 text-sm"
+                                            onClick={() => setDeleteMenu(null)}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 )}
 
                                 {/* Reaction Button */}
