@@ -5,7 +5,7 @@ import { Chat } from "../models/Chat.js"
 export const registerSocketHandlers = (io) => {
     const onlineUsers = new Map();
 
-    io.on('connection', (socket) => {
+    io.on('connection',     (socket) => {
         console.log("🔌 User connected:", socket.id);
 
         socket.on('presence:online', async (userId) => {
@@ -122,7 +122,9 @@ export const registerSocketHandlers = (io) => {
                 if (type === "everyone") {
                     await Message.findByIdAndUpdate(messageId, {
                         isDeleted: true,
-                        text: "This message was deleted"
+                        text: "",
+                        fileUrl: null,
+                        fileType: null
                     });
 
                     io.to(chatId).emit("message:deleted", {
@@ -153,18 +155,18 @@ export const registerSocketHandlers = (io) => {
 
             // Check if user already reacted with SAME emoji
             const alreadySame = msg.reactions.some(
-                r => r.userId && r.userId.toString() === userIdStr && r.emoji === emoji
+                r => r.user && r.user.toString() === userIdStr && r.emoji === emoji
             );
 
             // Remove ALL reactions from this user (important cleanup)
             msg.reactions = msg.reactions.filter(
-                r => r.userId && r.userId.toString() !== userIdStr
+                r => r.user && r.user.toString() !== userIdStr
             );
 
             // If NOT same emoji → add new
             if (!alreadySame) {
                 msg.reactions.push({
-                    userId: userIdStr,
+                    user: userIdStr,
                     emoji
                 });
             }
