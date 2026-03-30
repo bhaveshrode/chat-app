@@ -44,7 +44,11 @@ const messageSchema = new mongoose.Schema(
                 },
                 emoji: String
             }
-        ]
+        ],
+        isEdited: {
+            type: Boolean,
+            default: false
+        }
     },
     {
         timestamps: true
