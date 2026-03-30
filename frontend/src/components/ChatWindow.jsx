@@ -1,13 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 
-const formatMessageTime = (date) => {
-    const d = new Date(date);
-    return d.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
-
 const formatDate = (date) => {
     const d = new Date(date);
     const now = new Date();
@@ -44,7 +36,7 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [activeReaction, setActiveReaction] = useState(null);
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
-    const [deleteMenu, setDeleteMenu] = useState(false);
+    const [deleteMenu, setDeleteMenu] = useState(null);
 
     const emojis = ["❤️", "😂", "👍", "😮", "😢"];
 
@@ -130,6 +122,46 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         socket.on("message:deleted", handleDelete);
 
         return () => socket.off("message:deleted", handleDelete);
+    }, [socket]);
+
+    useEffect(() => {
+        const handleSeen = ({ messageId, userId }) => {
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg._id === messageId
+                        ? {
+                            ...msg,
+                            seenBy: [...(msg.seenBy || []), userId]
+                        }
+                        : msg
+                )
+            );
+        };
+
+        socket.on("message:seen", handleSeen);
+
+        return () => socket.off("message:seen", handleSeen);
+    }, [socket]);
+
+    useEffect(() => {
+        if (!activeChatId) return;
+
+        socket.emit("chat:join", activeChatId);
+
+    }, [activeChatId]);
+
+    useEffect(() => {
+        const handleUpdate = (updatedMsg) => {
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg._id === updatedMsg._id ? updatedMsg : msg
+                )
+            );
+        };
+
+        socket.on("message:updated", handleUpdate);
+
+        return () => socket.off("message:updated", handleUpdate);
     }, [socket]);
 
     // Send message
@@ -384,8 +416,20 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                 </div>
 
                                 {/* Time */}
-                                <div className="text-xs text-right mt-1 opacity-70">
+                                <div className="text-xs text-right mt-1 opacity-70 flex items-center justify-end gap-1">
                                     {formatDate(msg.createdAt)}
+
+                                    {isMe && (
+                                        <span>
+                                            {msg.seenBy?.length > 1 ? (
+                                                <span className="text-blue-500">✓✓</span>
+                                            ) : msg.status === "delivered" ? (
+                                                <span className="text-gray-400">✓✓</span>
+                                            ) : (
+                                                <span className="text-gray-400">✓</span>
+                                            )}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
