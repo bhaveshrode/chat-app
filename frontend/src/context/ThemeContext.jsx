@@ -9,7 +9,7 @@ export const ThemeProvider = ({ children }) => {
 
     return (
         <ThemeContext.Provider value={value}>
-            <div data-theme={theme}>{children}</div>
+            <div className={theme === "dark" ? "dark" : ""}>{children}</div>
         </ThemeContext.Provider>
     );
 };
