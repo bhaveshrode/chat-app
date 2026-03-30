@@ -66,9 +66,13 @@ export const registerSocketHandlers = (io) => {
 
                 io.to(chatId).emit('message:new', savedMessage);
 
-                await Message.findByIdAndUpdate(savedMessage._id, {
-                    status: "delivered"
-                });
+                const updatedMsg = await Message.findByIdAndUpdate(
+                    savedMessage._id,
+                    { status: "delivered" },
+                    { new: true }
+                );
+
+                io.to(chatId).emit("message:updated", updatedMsg);
             }
             catch(err){
                 console.error("❌ Error saving message:", err);
