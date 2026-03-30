@@ -8,6 +8,33 @@ const formatMessageTime = (date) => {
     });
 };
 
+const formatDate = (date) => {
+    const d = new Date(date);
+    const now = new Date();
+
+    const isToday =
+        d.toDateString() === now.toDateString();
+
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+
+    const isYesterday =
+        d.toDateString() === yesterday.toDateString();
+
+    if (isToday) {
+        return d.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    }
+
+    if (isYesterday) {
+        return "Yesterday";
+    }
+
+    return d.toLocaleDateString();
+};
+
 export const ChatWindow = ({ socket, activeChatId, me, users }) => {
     const [text, setText] = useState("");
     const [messages, setMessages] = useState([]);
@@ -84,6 +111,24 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         socket.on("message:reaction", handleReaction);
 
         return () => socket.off("message:reaction", handleReaction);
+    }, [socket]);
+
+    useEffect(() => {
+        const handleDelete = ({ messageId, type }) => {
+            setMessages(prev =>
+                prev.map(msg =>
+                    msg._id === messageId
+                        ? type === "everyone"
+                            ? { ...msg, isDeleted: true, text: "" }
+                            : msg
+                        : msg
+                )
+            );
+        };
+
+        socket.on("message:deleted", handleDelete);
+
+        return () => socket.off("message:deleted", handleDelete);
     }, [socket]);
 
     // Send message
@@ -178,12 +223,14 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
         <section className="flex flex-col h-full overflow-hidden">
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto overflow-x-visible p-4 space-y-4 bg-slate-800 rounded-lg">
+            <div className="flex-1 overflow-y-auto overflow-x-visible p-4 space-y-4 bg-white dark:bg-slate-800 rounded-lg">
                 {messages.length === 0 && (
                     <p className="text-gray-400 text-center">No messages yet</p>
                 )}
 
                 {messages.map((msg) => {
+                    if (msg.deletedFor?.includes(me._id)) return null;
+
                     const isMe = msg.senderId === me?._id || msg.sender === me?._id;
 
                     return (
@@ -199,12 +246,19 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                 }`}
                             >
                                 {/* Message Text */}
-                                {msg.text && <div>{msg.text}</div>}
+                                {msg.isDeleted ? (
+                                    <div className="italic text-gray-400">
+                                        This message was deleted
+                                    </div>
+                                ) : (
+                                    <>
+                                        {msg.text && <div>{msg.text}</div>}
+                                    </>
+                                )}
 
-                                {msg.fileUrl && (
+                                {!msg.isDeleted && msg.fileUrl && (
                                     <div className="mt-2 bg-slate-800 p-2 rounded-lg">
 
-                                        {/* Image */}
                                         {msg.fileType?.startsWith("image") && (
                                             <img
                                                 src={`http://localhost:5000${msg.fileUrl}`}
@@ -212,25 +266,37 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                                             />
                                         )}
 
-                                        {/* Text File Preview */}
                                         {msg.fileType?.includes("text") && (
                                             <TextFilePreview url={`http://localhost:5000${msg.fileUrl}`} />
                                         )}
 
-                                        {/* File Name */}
                                         <div className="text-sm mt-1 text-gray-300">
                                             📄 {msg.fileUrl.split('/').pop()}
                                         </div>
 
-                                        {/* Download Button */}
                                         <button
                                             onClick={() => downloadFile(msg.fileUrl)}
                                             className="mt-1 text-xs bg-green-600 px-2 py-1 rounded"
                                         >
                                             Download
                                         </button>
-
                                     </div>
+                                )}
+
+                                {!msg.isDeleted && (
+                                    <button
+                                        onClick={() =>
+                                            socket.emit("message:delete", {
+                                                messageId: msg._id,
+                                                type: "everyone",
+                                                userId: me._id,
+                                                chatId: activeChatId
+                                            })
+                                        }
+                                        className="text-xs text-red-300 mt-1"
+                                    >
+                                        Delete
+                                    </button>
                                 )}
 
                                 {/* Reaction Button */}
@@ -270,7 +336,7 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
 
                                 {/* Time */}
                                 <div className="text-xs text-right mt-1 opacity-70">
-                                    {formatMessageTime(msg.createdAt)}
+                                    {formatDate(msg.createdAt)}
                                 </div>
                             </div>
 
@@ -332,7 +398,7 @@ export const ChatWindow = ({ socket, activeChatId, me, users }) => {
                 onDragOver={handleDragOver}
             >
 
-                <div className="text-xs text-gray-400 text-center mb-1">
+                <div className="border-2 border-dashed border-gray-400 dark:border-gray-600 p-3 rounded-xl text-center text-gray-600 dark:text-gray-400">
                     Drag & Drop file here or use 📎
                 </div>
 
